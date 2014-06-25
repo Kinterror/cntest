@@ -16,7 +16,7 @@ public class TCPTest extends AndroidTestCase{
 	
 	
 	public void setUp(){
-		//System.setProperty("PACKET_LOSS", "50");
+		System.setProperty("PACKET_LOSS", "20");
 		Thread thdClient = new Thread(new Runnable(){
 			public void run() {
 				try {
@@ -54,7 +54,6 @@ public class TCPTest extends AndroidTestCase{
 				} catch (IOException e) {
 					e.printStackTrace();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -97,7 +96,6 @@ public class TCPTest extends AndroidTestCase{
 				} catch (IOException e) {
 					e.printStackTrace();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
