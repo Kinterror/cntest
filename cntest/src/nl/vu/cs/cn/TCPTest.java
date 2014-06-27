@@ -14,9 +14,10 @@ public class TCPTest extends AndroidTestCase{
 	TCP clientStack;
 	Socket clientSocket;
 	
+	private boolean doSimultaneousClosing = false;
 	
 	public void setUp(){
-		System.setProperty("PACKET_LOSS", "20");
+		//System.setProperty("PACKET_LOSS", "50");
 		Thread thdClient = new Thread(new Runnable(){
 			public void run() {
 				try {
@@ -54,6 +55,7 @@ public class TCPTest extends AndroidTestCase{
 				} catch (IOException e) {
 					e.printStackTrace();
 				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -88,7 +90,8 @@ public class TCPTest extends AndroidTestCase{
 					String reply = "How are you?";
 					serverSocket.write(reply.getBytes(), 0, reply.length());
 					
-					Thread.sleep(5000);
+					if(!doSimultaneousClosing)
+						Thread.sleep(5000);
 					//closing the connection
 					Log.d("Server", "Server closes the connection");
 					serverSocket.close();
@@ -96,6 +99,7 @@ public class TCPTest extends AndroidTestCase{
 				} catch (IOException e) {
 					e.printStackTrace();
 				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -115,7 +119,10 @@ public class TCPTest extends AndroidTestCase{
 		}
 	}
 	
-	
+	public void testSimultaneousClosing (){
+		doSimultaneousClosing = true;
+		setUp();
+	}
 	
 	/*
 	 * public void testReadWrite() {
