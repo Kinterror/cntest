@@ -70,7 +70,7 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 	 * @param clientLoss
 	 * @param serverLoss
 	 */
-	private void establish(int[] clientLoss, int[] serverLoss){
+	private void runTest(int[] clientLoss, int[] serverLoss){
 		try {
 			serverStack = new TCPWithPacketLoss(20, serverLoss);
 			clientStack = new TCPWithPacketLoss(10, clientLoss);
@@ -210,66 +210,66 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 	}
 	
 	public void testNoLoss(){
-		establish(noloss, noloss);
+		runTest(noloss, noloss);
 	}
 	
 	public void testSynLoss(){
 		//lose the first SYN
-		establish(synloss, noloss);
+		runTest(synloss, noloss);
 		
 		//lose the first 5 syn packets
-		establish(moresynloss, noloss);
+		runTest(moresynloss, noloss);
 	}
 	
 	public void testSynAckLoss(){
 		//lose the first SYNACK
-		establish(noloss, synloss);
+		runTest(noloss, synloss);
 		
 		//lose the first 5 SYNACKs
-		establish(noloss, moresynloss);
+		runTest(noloss, moresynloss);
 		
 		//lose both first syn and synack
-		establish(synloss, synloss);
+		runTest(synloss, synloss);
 	}
 	
 	public void testAckLoss(){
 		//lose the first ACK
-		establish(ackloss, noloss);
+		runTest(ackloss, noloss);
 		
 		//lose the first syn and the first ack
-		establish(synandackloss, noloss);
+		runTest(synandackloss, noloss);
 	}
 	
 	public void testDataLoss(){
 		//lose first data
-		establish(datalossClnt, noloss);
+		runTest(datalossClnt, noloss);
 		//lose data ACK
-		establish(noloss, dataAckLossServ);
+		runTest(noloss, dataAckLossServ);
 		//lose both the above packets
-		establish(datalossClnt, dataAckLossServ);
+		runTest(datalossClnt, dataAckLossServ);
 	}
 	
 	public void testCloseLoss(){
 		//lose server's fin
-		establish(noloss, finLossServAsyn);
+		runTest(noloss, finLossServAsyn);
 		
 		//lose server's ack to fin
-		establish(noloss, ackfinLossServAsyn);
+		runTest(noloss, ackfinLossServAsyn);
 		
 		//lose client's fin
-		establish(finLossClnt, noloss);
+		runTest(finLossClnt, noloss);
 		
 		//lose client's ack to fin
-		establish(ackFinLossClnt, noloss);
+		runTest(ackFinLossClnt, noloss);
 		
 		//synchronous closing
 		doSimultaneousClosing = true;
 		
 		//fin loss
-		establish(noloss, finLossServSyn);
+		runTest(noloss, finLossServSyn);
 		
 		//ack loss
-		establish(noloss, ackfinLossServSyn);
+		runTest(noloss, ackfinLossServSyn);
 		
 		doSimultaneousClosing = false;
 	}

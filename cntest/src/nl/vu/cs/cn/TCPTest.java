@@ -1,7 +1,5 @@
 package nl.vu.cs.cn;
 
-import java.io.IOException;
-
 import nl.vu.cs.cn.IP.IpAddress;
 import nl.vu.cs.cn.TCP.Socket;
 import android.test.AndroidTestCase;
@@ -14,9 +12,9 @@ public class TCPTest extends AndroidTestCase{
 	TCP clientStack;
 	Socket clientSocket;
 	
-	private boolean doSimultaneousClosing = false;
+	private boolean doSimultaneousClosing = false, doReuseSocket = false;
 	
-	public void setUp(){
+	private void init(){
 		//System.setProperty("PACKET_LOSS", "50");
 		Thread thdClient = new Thread(new Runnable(){
 			public void run() {
@@ -46,16 +44,26 @@ public class TCPTest extends AndroidTestCase{
 					
 					//Closing connection
 					Log.d("Client", "Client closes the connection");
-					clientSocket.close();
+					assertTrue(clientSocket.close());
 					int offset = 0;
 					while ((len = clientSocket.read(buffer, offset, 5)) == 5) {
 						offset += len;
 					}
 					Thread.sleep(20000);
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
+					
+					//maybe reuse the socket
+					if (doReuseSocket){
+						assertTrue(clientSocket.connect(IpAddress.getAddress("192.168.0."+20), 4444));
+						
+						String str = "test";
+						clientSocket.write(str.getBytes(), 0, 4);
+						
+						assertTrue(clientSocket.close());
+						buffer= new byte[12];
+						assertTrue(clientSocket.read(buffer, 0, 12) == 0);
+					}
+					
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -96,10 +104,15 @@ public class TCPTest extends AndroidTestCase{
 					Log.d("Server", "Server closes the connection");
 					serverSocket.close();
 					Thread.sleep(15000);
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
+					
+					if (doReuseSocket){
+						serverSocket.accept();
+						byte[] result = new byte[4];
+						assertTrue(serverSocket.read(result, 0, 4) == 4);
+						
+						assertTrue(serverSocket.close());
+					}
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -119,44 +132,19 @@ public class TCPTest extends AndroidTestCase{
 		}
 	}
 	
+	public void testDefault(){
+		init();
+	}
+	
 	public void testSimultaneousClosing (){
 		doSimultaneousClosing = true;
-		setUp();
+		init();
+		doSimultaneousClosing = false;
 	}
 	
-	/*
-	 * public void testReadWrite() {
-		Thread clientThread = new Thread (new Runnable() {
-			
-			public void run() {
-				String message = "Hello World";
-				Log.d("clientThread", "Client writes into the buffer");
-				clientSocket.write(message.getBytes(), 0, message.length());
-			}
-		});
-		
-		Thread serverThread = new Thread(new Runnable() {
-			
-			public void run() {
-				byte[] receivedMessage = new byte[20];
-				Log.d("serverThread", "Server reads into the buffer");
-				serverSocket.read(receivedMessage, 0, 5);
-				assertEquals("Hello", new String(receivedMessage));
-				serverSocket.read(receivedMessage, 5, 6);
-				assertEquals("Hello World", new String(receivedMessage));
-			}
-		});
-		
-		serverThread.start();
-		clientThread.start();
-		try{
-			serverThread.join();
-			clientThread.join();
-		} catch (InterruptedException ie) {}
+	public void testSocketReuse(){
+		doReuseSocket = true;
+		init();
+		doReuseSocket = false;
 	}
-	
-	void testRead(){
-		
-	}
-	*/
 }
