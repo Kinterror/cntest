@@ -47,6 +47,7 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 	private final int[] noloss = {};
 	private final int[] synloss = {0};
 	private final int[] moresynloss = {0,1,2,3,4};
+	private final int[] totalLoss = {0,1,2,3,4,5,6,7,8,9};
 	
 	private final int[] ackloss = {1};
 	private final int[] synandackloss = {0,2};
@@ -65,6 +66,106 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 	
 	private boolean doSimultaneousClosing = false;
 	
+	private class Client implements Runnable {
+
+		public void run() {
+			try{
+				clientSocket = clientStack.socket();
+				if (!clientSocket.connect(IpAddress.getAddress("192.168.0.20"), 4444))
+					if(!Arrays.equals(clientStack.lostPacketNumbers, totalLoss))
+						fail("unable to connect.");
+					else
+						return;
+
+				/*
+				 * write hello world
+				 */
+				String message = "Hello World";
+				byte[] messageBytes = message.getBytes();
+				int messageLength = message.length();
+				Log.d("clientThread", "Client writes into the buffer");
+				clientSocket.write(messageBytes, 0, messageLength);
+
+				/*
+				 * read how are you
+				 */
+				byte[] buffer= new byte[12];
+				Log.d("clientThread", "Client reads into the buffer");
+				int len = clientSocket.read(buffer, 0, 8);
+				byte[] tmp = new byte[len];
+				for (int i = 0; i < tmp.length; i++) {
+					tmp[i] = buffer[i];
+				}
+				assertEquals("How are ", new String(tmp));
+
+				//Closing connection
+				Log.d("Client", "Client closes the connection");
+				clientSocket.close();
+				int offset = 0;
+				while ((len = clientSocket.read(buffer, offset, 5)) == 5) {
+					offset += len;
+				}
+				Thread.sleep(20000);
+				assertFalse(clientStack.hasFailed);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private class Server implements Runnable {
+		public void run() {
+			try{
+				
+				/*
+				 * accept
+				 */
+				serverSocket = serverStack.socket(4444);
+				if (!serverSocket.accept())
+					fail("unable to accept.");
+				
+				/*
+				 * read "hello"
+				 */
+				byte[] buffer= new byte[20];
+				Log.d("serverThread", "Server reads into the buffer");
+				
+				serverSocket.read(buffer, 0, 5);
+				byte[] receivedMessage= new byte[5];
+				for (int i = 0; i < receivedMessage.length; i++) {
+					receivedMessage[i] = buffer[i];
+				}
+				assertEquals("Hello", new String(receivedMessage));
+				
+				/*
+				 * read "world"
+				 */
+				serverSocket.read(buffer, 5, 6);
+				receivedMessage= new byte[11];
+				for (int i = 0; i < receivedMessage.length; i++) {
+					receivedMessage[i] = buffer[i];
+				}
+				assertEquals("Hello World", new String(receivedMessage));
+				
+				/*
+				 * write "how are you"
+				 */
+				String reply = "How are you?";
+				serverSocket.write(reply.getBytes(), 0, reply.length());
+				
+				if (!doSimultaneousClosing)
+					Thread.sleep(5000);
+				//closing the connection
+				Log.d("Server", "Server closes the connection");
+				serverSocket.close();
+				Thread.sleep(15000);
+				assertFalse(serverStack.hasFailed);
+			}catch (InterruptedException e){
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	/**
 	 * establish a new connection with packet synloss
 	 * @param clientLoss
@@ -79,102 +180,9 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 			fail("Failed to create stack");
 		}
 		
-		Thread thdClient = new Thread(new Runnable(){
-			public void run() {
-				try{
-					clientSocket = clientStack.socket();
-					if (!clientSocket.connect(IpAddress.getAddress("192.168.0.20"), 4444))
-						fail("unable to connect.");
-
-					/*
-					 * write hello world
-					 */
-					String message = "Hello World";
-					byte[] messageBytes = message.getBytes();
-					int messageLength = message.length();
-					Log.d("clientThread", "Client writes into the buffer");
-					clientSocket.write(messageBytes, 0, messageLength);
-
-					/*
-					 * read how are you
-					 */
-					byte[] buffer= new byte[12];
-					Log.d("clientThread", "Client reads into the buffer");
-					int len = clientSocket.read(buffer, 0, 8);
-					byte[] tmp = new byte[len];
-					for (int i = 0; i < tmp.length; i++) {
-						tmp[i] = buffer[i];
-					}
-					assertEquals("How are ", new String(tmp));
-
-					//Closing connection
-					Log.d("Client", "Client closes the connection");
-					clientSocket.close();
-					int offset = 0;
-					while ((len = clientSocket.read(buffer, offset, 5)) == 5) {
-						offset += len;
-					}
-					Thread.sleep(20000);
-					assertFalse(clientStack.hasFailed);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		});
 		
-		Thread thdServer = new Thread(new Runnable() {
-			public void run() {
-				try{
-					
-					/*
-					 * accept
-					 */
-					serverSocket = serverStack.socket(4444);
-					if (!serverSocket.accept())
-						fail("unable to accept.");
-					
-					/*
-					 * read "hello"
-					 */
-					byte[] buffer= new byte[20];
-					Log.d("serverThread", "Server reads into the buffer");
-					
-					serverSocket.read(buffer, 0, 5);
-					byte[] receivedMessage= new byte[5];
-					for (int i = 0; i < receivedMessage.length; i++) {
-						receivedMessage[i] = buffer[i];
-					}
-					assertEquals("Hello", new String(receivedMessage));
-					
-					/*
-					 * read "world"
-					 */
-					serverSocket.read(buffer, 5, 6);
-					receivedMessage= new byte[11];
-					for (int i = 0; i < receivedMessage.length; i++) {
-						receivedMessage[i] = buffer[i];
-					}
-					assertEquals("Hello World", new String(receivedMessage));
-					
-					/*
-					 * write "how are you"
-					 */
-					String reply = "How are you?";
-					serverSocket.write(reply.getBytes(), 0, reply.length());
-					
-					if (!doSimultaneousClosing)
-						Thread.sleep(5000);
-					//closing the connection
-					Log.d("Server", "Server closes the connection");
-					serverSocket.close();
-					Thread.sleep(15000);
-					assertFalse(serverStack.hasFailed);
-				}catch (InterruptedException e){
-					e.printStackTrace();
-				}
-			}
-		});
-		
+		Thread thdServer = new Thread(new Server());
+		Thread thdClient = new Thread(new Client());
 		thdServer.start();
 		thdClient.start();
 		
@@ -221,6 +229,28 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 		runTest(moresynloss, noloss);
 	}
 	
+	/**
+	 * tests what happens if all syn packets get lost. No server is necessary here.
+	 */
+	public void testConnectFail(){
+		try {
+			clientStack = new TCPWithPacketLoss(10, totalLoss);
+		} catch (IOException e) {
+			e.printStackTrace();
+			fail("Failed to create stack");
+		}
+		
+		
+		Thread thdClient = new Thread(new Client());
+		thdClient.start();
+		
+		try {
+			thdClient.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public void testSynAckLoss(){
 		//lose the first SYNACK
 		runTest(noloss, synloss);
@@ -256,10 +286,10 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 		//lose server's ack to fin
 		runTest(noloss, ackfinLossServAsyn);
 		
-		//lose client's fin
+		//lose Client's fin
 		runTest(finLossClnt, noloss);
 		
-		//lose client's ack to fin
+		//lose Client's ack to fin
 		runTest(ackFinLossClnt, noloss);
 		
 		//synchronous closing
