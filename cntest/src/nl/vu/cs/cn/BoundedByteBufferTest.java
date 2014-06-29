@@ -138,7 +138,7 @@ public class BoundedByteBufferTest extends AndroidTestCase{
 	/**
 	 * test if an exception is raised when buffering if the buffer is full
 	 */
-	public void testDeBufferFull(){
+	public void testBufferFull(){
 		BoundedByteBuffer buf = new BoundedByteBuffer(10);
 		byte[] array = {1,2,3,4,5,6,7,8,9,0};
 		byte[] array2 = {1,2,3,4,5,6,7,8,9,10,11};

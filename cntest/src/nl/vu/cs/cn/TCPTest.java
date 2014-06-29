@@ -197,6 +197,35 @@ public class TCPTest extends AndroidTestCase{
 	}
 	
 	/**
+	 * try to connect to a server. After the first one finishes, the server will listen again and a second (different)
+	 * client will connect.
+	 */
+	public void testConnectAfterConnect(){
+		doReuseSocketSv = true;
+		Thread thdServer = new Thread(new Server());
+		thdServer.start();
+		Thread thdClient1 = new Thread(new Client());
+		thdClient1.start();
+		
+		try {
+			thdClient1.join();
+		} catch (InterruptedException e) {
+			fail();
+		}
+		Thread thdClient2 = new Thread(new Client2());
+		thdClient2.start();
+		
+		try {
+			thdClient2.join();
+			thdServer.join();
+		} catch (InterruptedException e) {
+			fail();
+		}
+		
+		doReuseSocketSv = false;
+	}
+	
+	/**
 	 * Test what happens if another client tries to connect while the connection is already established
 	 */
 	public void testMultipleClients(){
@@ -226,35 +255,6 @@ public class TCPTest extends AndroidTestCase{
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-	}
-	
-	/**
-	 * try to connect to a server. After the first one finishes, the server will listen again and a second (different)
-	 * client will connect.
-	 */
-	public void testConnectAfterConnect(){
-		doReuseSocketSv = true;
-		Thread thdServer = new Thread(new Server());
-		thdServer.start();
-		Thread thdClient1 = new Thread(new Client());
-		thdClient1.start();
-		
-		try {
-			thdClient1.join();
-		} catch (InterruptedException e) {
-			fail();
-		}
-		Thread thdClient2 = new Thread(new Client2());
-		thdClient2.start();
-		
-		try {
-			thdClient2.join();
-			thdServer.join();
-		} catch (InterruptedException e) {
-			fail();
-		}
-		
-		doReuseSocketSv = false;
 	}
 	
 	/**
@@ -324,7 +324,6 @@ public class TCPTest extends AndroidTestCase{
 				}
 			}
 		});
-		
 		
 		Log.d("testConnect", "threadServ starts");
 		thdServer.start();
