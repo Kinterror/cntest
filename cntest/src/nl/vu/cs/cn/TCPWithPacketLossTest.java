@@ -233,19 +233,57 @@ public class TCPWithPacketLossTest extends AndroidTestCase {
 	 * tests what happens if all syn packets get lost. No server is necessary here.
 	 */
 	public void testConnectFail(){
+		
 		try {
-			clientStack = new TCPWithPacketLoss(10, totalLoss);
+			TCPWithPacketLoss clientStack = new TCPWithPacketLoss(10, totalLoss);
+			Socket sock = clientStack.socket();
+			
+			if(sock.connect(IpAddress.getAddress("1.2.3.4"), 123)){
+				fail("connect succeeded on strange address");
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			fail("Failed to create stack");
 		}
+	}
+	
+	public void testAcceptFail(){
+		Thread serverFail = new Thread(new Runnable(){
+			public void run(){
+				TCPWithPacketLoss serverStack;
+				try {
+					serverStack = new TCPWithPacketLoss(20, totalLoss);
+				
+					Socket serverSocket = serverStack.socket(4444);
+					if (serverSocket.accept())
+						fail("succeeded to accept.");
+				} catch (IOException e) {
+					fail("Failed to create stack");
+				}
+			}
+		});
 		
+		Thread clientFail = new Thread(new Runnable(){
+			public void run(){
+				TCPWithPacketLoss clientStack;
+				try {
+					clientStack = new TCPWithPacketLoss(10, noloss);
+				
+					Socket clientSocket = clientStack.socket();
+					if (clientSocket.connect(IpAddress.getAddress("192.168.0.20"), 4444))
+						fail("succeeded to connect.");
+				} catch (IOException e) {
+					fail("Failed to create stack");
+				}
+			}
+		});
 		
-		Thread thdClient = new Thread(new Client());
-		thdClient.start();
+		serverFail.start();
+		clientFail.start();
 		
 		try {
-			thdClient.join();
+			clientFail.join();
+			serverFail.join();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
